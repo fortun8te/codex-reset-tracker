@@ -33,6 +33,8 @@ STATE_PATH = os.path.join(ROOT, "state.json")
 RSS_UA = "Tiny Tiny RSS/24.02 (https://tt-rss.org/)"
 MAX_AGE_HOURS = 48          # never alert on anything older than this
 SEEN_CAP = 400              # per-handle ring buffer of post ids
+BLIND_AFTER = 12            # consecutive all-mirrors-failed runs before warning
+BLIND_REPEAT = 144          # ...and how often to re-warn after that
 
 
 def _ssl_ctx():
@@ -210,25 +212,32 @@ def classify(posts, cfg, api_key):
 
     if api_key:
         for model in cfg["models"]:
-            try:
+            # reasoning models (gpt-5-nano et al) burn the token budget on thinking
+            # unless effort is pinned low; models that don't know the field 400 on it.
+            for body_extra in ({"reasoning": {"effort": "low"}}, {}):
+              try:
+                payload = {
+                    "model": model,
+                    "temperature": 0,
+                    "max_tokens": 1500,
+                    "messages": [
+                        {"role": "system", "content": SYSTEM},
+                        {"role": "user", "content": prompt},
+                    ],
+                }
+                payload.update(body_extra)
                 resp = http_post_json(
                     "https://openrouter.ai/api/v1/chat/completions",
-                    {
-                        "model": model,
-                        "temperature": 0,
-                        "max_tokens": 700,
-                        "messages": [
-                            {"role": "system", "content": SYSTEM},
-                            {"role": "user", "content": prompt},
-                        ],
-                    },
+                    payload,
                     {
                         "Authorization": f"Bearer {api_key}",
                         "HTTP-Referer": "https://github.com/codex-reset-tracker",
                         "X-Title": "codex reset tracker",
                     },
                 )
-                content = resp["choices"][0]["message"]["content"]
+                content = resp["choices"][0]["message"].get("content") or ""
+                if not content.strip():
+                    raise ValueError(f"empty content (finish={resp['choices'][0].get('finish_reason')})")
                 m = re.search(r"\[.*\]", content, re.S)
                 verdicts = json.loads(m.group(0) if m else content)
                 out = {}
@@ -239,9 +248,11 @@ def classify(posts, cfg, api_key):
                             bool(v.get("hit")), str(v.get("why", ""))[:160], model,
                         )
                 if out:
-                    log(f"  classified {len(out)} posts with {model}")
+                    cost = (resp.get("usage") or {}).get("cost", 0)
+                    log(f"  classified {len(out)} posts with {model} (${cost:.5f})")
                     return out
-            except Exception as e:
+                raise ValueError("model returned no usable verdicts")
+              except Exception as e:
                 body = ""
                 if isinstance(e, urllib.error.HTTPError):
                     try:
@@ -374,6 +385,7 @@ def main():
     prefilter = build_prefilter(cfg["prefilter"])
     cutoff = datetime.now(timezone.utc) - timedelta(hours=MAX_AGE_HOURS)
     seen = state.setdefault("seen", {})
+    streaks = state.setdefault("fail_streak", {})
     first_run = not state.get("seeded")
 
     fresh, scanned = [], 0
@@ -381,8 +393,21 @@ def main():
         log(f"fetching @{handle}")
         posts, ok = fetch_handle(handle, cfg["nitter_instances"])
         if not ok:
-            log(f"  !! every mirror failed for @{handle} — skipping (state untouched)")
+            streaks[handle] = streaks.get(handle, 0) + 1
+            log(f"  !! every mirror failed for @{handle} (streak {streaks[handle]}) — state untouched")
+            # ~1h of consecutive failures = we are blind; warn once, then every ~12h
+            if streaks[handle] == BLIND_AFTER or (
+                streaks[handle] > BLIND_AFTER and streaks[handle] % BLIND_REPEAT == 0
+            ):
+                send(f"\u26a0\ufe0f <b>tracker is blind on @{esc(handle)}</b>\n"
+                     f"Every mirror has failed {streaks[handle]} runs in a row. "
+                     f"Nitter instances may be down \u2014 check the pool in config.json.",
+                     token, chat_id, preview=False)
             continue
+        if streaks.get(handle, 0) >= BLIND_AFTER:
+            send(f"\u2705 back online for @{esc(handle)} after {streaks[handle]} failed runs.",
+                 token, chat_id, preview=False)
+        streaks[handle] = 0
         scanned += len(posts)
         known = set(seen.get(handle, []))
         recheck = {p["id"] for p in posts[:args.recheck]} if args.recheck else set()
@@ -413,8 +438,12 @@ def main():
         log("first run: baseline saved, no alerts sent")
         return 0
 
-    candidates = [p for p in fresh if prefilter.search(p["text"])]
-    log(f"{len(candidates)} passed the keyword prefilter")
+    if cfg.get("prefilter_enabled", True):
+        candidates = [p for p in fresh if prefilter.search(p["text"])]
+        log(f"{len(candidates)} of {len(fresh)} passed the keyword prefilter")
+    else:
+        candidates = fresh
+        log(f"prefilter off - judging all {len(candidates)} new posts")
 
     alerts = 0
     if candidates:
