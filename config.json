@@ -1,0 +1,57 @@
+{
+  "handles": [
+    "btibor91",
+    "sama"
+  ],
+  "topic": "OpenAI resetting, refreshing, raising, extending or gifting usage limits / rate limits / credits for Codex or ChatGPT",
+  "topic_description": "Announcements or credible reports that OpenAI is doing a RESET or change of usage limits: phrases like 'we're going to do a reset', 'limits have been reset', 'resetting everyone's limits', 'we're giving everyone extra usage', 'raising the weekly limit', 'credits refreshed', 'bumping rate limits', 'limits are back', 'free usage this weekend'. Codex and ChatGPT Plus/Pro/Business usage limits are the subject of interest.",
+  "prefilter": [
+    "reset",
+    "resets",
+    "resetting",
+    "limit",
+    "limits",
+    "limited",
+    "unlimited",
+    "rate.?limit",
+    "quota",
+    "quotas",
+    "usage",
+    "credit",
+    "credits",
+    "cap",
+    "caps",
+    "capped",
+    "allowance",
+    "refresh",
+    "refreshed",
+    "restore",
+    "restored",
+    "bump",
+    "bumped",
+    "raise",
+    "raised",
+    "increase",
+    "increased",
+    "extra",
+    "free",
+    "comped",
+    "throttl",
+    "downtime",
+    "back to normal"
+  ],
+  "nitter_instances": [
+    "https://nitter.poast.org",
+    "https://nitter.perennialte.ch",
+    "https://nitter.privacyredirect.com",
+    "https://nitter.net"
+  ],
+  "models": [
+    "nvidia/nemotron-nano-9b-v2:free",
+    "google/gemma-4-31b-it:free",
+    "openai/gpt-oss-20b:free",
+    "z-ai/glm-5.2:free"
+  ],
+  "heartbeat_hours": 24,
+  "max_alerts_per_run": 6
+}

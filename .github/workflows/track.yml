@@ -1,0 +1,49 @@
+name: track
+
+on:
+  schedule:
+    # every 5 minutes (GitHub queues cron jobs, so the real cadence is ~5-15 min)
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      recheck:
+        description: 'Re-scan the N most recent posts per handle even if already seen'
+        required: false
+        default: '0'
+
+concurrency:
+  group: track
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run tracker
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: python3 tracker.py --recheck "${{ github.event.inputs.recheck || 0 }}"
+
+      - name: Persist state
+        run: |
+          if [ -n "$(git status --porcelain state.json)" ]; then
+            git config user.name  "codex-reset-tracker"
+            git config user.email "actions@github.com"
+            git add state.json
+            git commit -m "state: seen posts $(date -u +%Y-%m-%dT%H:%MZ) [skip ci]"
+            for i in 1 2 3; do
+              git push && break
+              git pull --rebase --autostash || true
+              sleep 3
+            done
+          else
+            echo "state unchanged"
+          fi
