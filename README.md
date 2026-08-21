@@ -20,7 +20,16 @@ milestone celebration or an apology for an incident, often without the words
 of a keyword filter.
 
 Runs on GitHub Actions cron. No X API. No server. No subscription.
-Model spend is roughly **$0.05/month**.
+**Costs nothing** — free OpenRouter models only, and `free_only` in the config is
+enforced in code: a paid model id in the list gets skipped with a log line, never
+called. Worst case it degrades to keyword matching rather than spending a cent.
+
+Alerts are two lines, because the only thing you actually want to know is when:
+
+```
+🚨 Codex limits reset now
+https://t.me/codexreset/19
+```
 
 ```
 GitHub Actions cron (*/5 min)
@@ -37,8 +46,8 @@ GitHub Actions cron (*/5 min)
 | --- | --- |
 | X's free API tier can't read timelines ($200/mo for Basic) | Nitter RSS mirrors — public, keyless. Pool of 4, tried in random order, dead ones skipped. |
 | A scraper that silently returns nothing looks identical to "no news" | If **every** mirror fails, the run aborts *without* touching state, so nothing is falsely marked seen. After ~1h of consecutive failures the bot tells you it's blind, and tells you again when it recovers. |
-| Keyword matching misses paraphrases ("everyone gets a fresh start today") | Every new post goes to the model, not just keyword hits. `openai/gpt-5-nano` at ~$0.0002 per batched call — around 10 calls/day, so pennies per month. A keyword prefilter is still in `config.json` if you ever want to cut that to zero. |
-| Free/cheap models get rate-limited upstream | Four models in a fallback chain (`gpt-5-nano` → three `:free` models). If all four fail it falls back to strict regex and still alerts, labelled as such. |
+| Keyword matching misses paraphrases ("everyone gets a fresh start today") | The two sources that actually announce resets — `tg/codexreset` and `@thsottiaux` — bypass the keyword filter entirely; every one of their posts goes to the model. The chatty backup accounts get keyword-filtered first, purely to stay under the free tier's daily request cap. |
+| Free models get rate-limited upstream | Four `:free` models in a fallback chain. If all four fail it falls back to strict regex and still alerts, labelled as such. Posts the model skips in a batch also fall through to regex — nothing is dropped silently. |
 | Cron job dies quietly and you never notice | Dead-man's switch: one `💤 tracker alive` line every 24h. No heartbeat = it's broken. |
 | Private repos only get 2000 Actions minutes/month | Repo is public, so Actions minutes are unlimited. Every secret is a GitHub Secret; nothing sensitive is committed. |
 
@@ -77,8 +86,9 @@ Everything lives in [`config.json`](config.json):
 - `topic` / `topic_description` — what counts as a hit. This *is* the prompt the
   model sees; rewrite it and the tracker tracks something else entirely.
 - `models` — OpenRouter fallback chain, tried in order.
-- `prefilter_enabled` — `false` by default (judge everything). Flip to `true` to
-  only spend tokens on posts containing a `prefilter` keyword.
+- `free_only` — `true`. Any model id not ending in `:free` is refused.
+- `priority_handles` — sources whose every post is judged, no keyword filter.
+- `prefilter_enabled` — keyword gate for everything outside `priority_handles`.
 - `heartbeat_hours` — `0` silences the alive-pings.
 - `max_alerts_per_run` — flood guard.
 

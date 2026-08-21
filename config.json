@@ -50,12 +50,17 @@
     "https://nitter.tiekoetter.com"
   ],
   "models": [
-    "openai/gpt-5-nano",
     "nvidia/nemotron-nano-9b-v2:free",
     "google/gemma-4-31b-it:free",
-    "openai/gpt-oss-20b:free"
+    "openai/gpt-oss-20b:free",
+    "z-ai/glm-5.2:free"
   ],
   "heartbeat_hours": 24,
   "max_alerts_per_run": 6,
-  "prefilter_enabled": false
+  "prefilter_enabled": true,
+  "free_only": true,
+  "priority_handles": [
+    "tg/codexreset",
+    "thsottiaux"
+  ]
 }

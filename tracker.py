@@ -235,8 +235,13 @@ credits. Speculation and questions do NOT count.
 POSTS:
 {posts}
 
+For each post give a "say" field: how you would tell a busy developer what just
+happened, in AT MOST 8 words, leading with the timing. Good: "Codex limits reset
+now", "Banked reset card, use it anytime", "Reset promised for tomorrow".
+Bad: "This post announces that OpenAI has decided to...". No post text, no quotes.
+
 Reply with ONLY a JSON array, one object per post, in order:
-[{{"i": 0, "hit": true, "why": "<max 15 words>"}}]"""
+[{{"i": 0, "hit": true, "say": "Codex limits reset now"}}]"""
 
 
 def classify(posts, cfg, api_key):
@@ -247,11 +252,18 @@ def classify(posts, cfg, api_key):
     )
     prompt = TEMPLATE.format(topic=cfg["topic"], desc=cfg["topic_description"], posts=listing)
 
+    models = cfg["models"]
+    if cfg.get("free_only", True):
+        paid = [m for m in models if not m.endswith(":free")]
+        if paid:
+            log(f"  free_only is on, skipping paid model(s): {', '.join(paid)}")
+        models = [m for m in models if m.endswith(":free")]
+
     if api_key:
-        for model in cfg["models"]:
+        for model in models:
             # reasoning models (gpt-5-nano et al) burn the token budget on thinking
             # unless effort is pinned low; models that don't know the field 400 on it.
-            for body_extra in ({"reasoning": {"effort": "low"}}, {}):
+            for body_extra in ({}, {"reasoning": {"effort": "low"}}):
               try:
                 payload = {
                     "model": model,
@@ -281,9 +293,8 @@ def classify(posts, cfg, api_key):
                 for v in verdicts:
                     i = int(v.get("i", -1))
                     if 0 <= i < len(posts):
-                        out[posts[i]["id"]] = (
-                            bool(v.get("hit")), str(v.get("why", ""))[:160], model,
-                        )
+                        say = str(v.get("say") or v.get("why") or "").strip()
+                        out[posts[i]["id"]] = (bool(v.get("hit")), say[:90], model)
                 if out:
                     cost = (resp.get("usage") or {}).get("cost", 0)
                     log(f"  classified {len(out)} posts with {model} (${cost:.5f})")
@@ -340,24 +351,11 @@ def esc(s):
     return html.escape(s, quote=False)
 
 
-def alert_text(post, why, model):
-    stamp = post["when"].astimezone(timezone.utc).strftime("%d %b %H:%M UTC") if post["when"] else "just now"
-    if post["kind"] == "channel":
-        tag = "📡"
-    elif post["kind"] == "repost":
-        tag = "🔁 repost by"
-    else:
-        tag = "🐦"
-    body = post["text"]
-    if len(body) > 900:
-        body = body[:900] + "…"
-    return (
-        f"🚨 <b>RESET ALERT</b> — {tag} {esc(post['handle'] if post['kind'] == 'channel' else '@' + post['handle'])}\n"
-        f"<i>{stamp}</i>\n\n"
-        f"{esc(body)}\n\n"
-        f"🧠 <i>{esc(why)}</i>\n"
-        f"{post['url']}"
-    )
+def alert_text(post, say, model):
+    """Two lines. What happened, and where to read more."""
+    if not say:
+        say = re.split(r"[\n.!?]", post["text"].strip())[0][:70]
+    return f"\U0001f6a8 <b>{esc(say)}</b>\n{post['url']}"
 
 
 # ----------------------------------------------------------------------- state
@@ -421,7 +419,7 @@ def main():
         return 2
 
     if args.test_alert:
-        ok = send("✅ <b>codex reset tracker</b> — test alert. Wiring works.", token, chat_id)
+        ok = send("\u2705 test alert \u2014 wiring works.", token, chat_id)
         return 0 if ok else 1
 
     prefilter = build_prefilter(cfg["prefilter"])
@@ -451,14 +449,11 @@ def main():
             if streaks[handle] == BLIND_AFTER or (
                 streaks[handle] > BLIND_AFTER and streaks[handle] % BLIND_REPEAT == 0
             ):
-                send(f"\u26a0\ufe0f <b>tracker is blind on @{esc(handle)}</b>\n"
-                     f"Every mirror has failed {streaks[handle]} runs in a row. "
-                     f"Nitter instances may be down \u2014 check the pool in config.json.",
+                send(f"\u26a0\ufe0f blind on {esc(handle)} \u2014 {streaks[handle]} failed runs.",
                      token, chat_id, preview=False)
             continue
         if streaks.get(handle, 0) >= BLIND_AFTER:
-            send(f"\u2705 back online for @{esc(handle)} after {streaks[handle]} failed runs.",
-                 token, chat_id, preview=False)
+            send(f"\u2705 {esc(handle)} back online.", token, chat_id, preview=False)
         streaks[handle] = 0
         scanned += len(posts)
         known = set(seen.get(handle, []))
@@ -483,16 +478,17 @@ def main():
         state["seeded"] = True
         state["last_heartbeat"] = datetime.now(timezone.utc).isoformat()
         save_state(state)
-        send(f"👀 <b>codex reset tracker armed</b>\nWatching: "
-             f"{', '.join('@' + h for h in cfg['handles'])}\n"
-             f"Baseline of {scanned} recent posts saved — you'll only get pinged on new ones.",
+        send(f"\U0001f440 tracker armed \u2014 {len(cfg['handles'])} sources, {scanned} posts baselined.",
              token, chat_id, preview=False)
         log("first run: baseline saved, no alerts sent")
         return 0
 
     if cfg.get("prefilter_enabled", True):
-        candidates = [p for p in fresh if prefilter.search(p["text"])]
-        log(f"{len(candidates)} of {len(fresh)} passed the keyword prefilter")
+        priority = set(cfg.get("priority_handles", []))
+        candidates = [p for p in fresh
+                      if p["handle"] in priority or prefilter.search(p["text"])]
+        log(f"{len(candidates)} of {len(fresh)} kept "
+            f"(priority sources always judged, rest keyword-filtered)")
     else:
         candidates = fresh
         log(f"prefilter off - judging all {len(candidates)} new posts")
@@ -531,8 +527,7 @@ def main():
             except Exception:
                 due = True
         if due and not args.dry_run:
-            send(f"💤 tracker alive — {scanned} posts scanned this cycle, nothing worth waking you for.",
-                 token, chat_id, preview=False)
+            send("\U0001f4a4 alive, no reset yet.", token, chat_id, preview=False)
             state["last_heartbeat"] = datetime.now(timezone.utc).isoformat()
 
     if not args.dry_run:
