@@ -1,10 +1,12 @@
 {
   "handles": [
+    "thsottiaux",
+    "sama",
     "btibor91",
-    "sama"
+    "OpenAI"
   ],
   "topic": "OpenAI resetting, refreshing, raising, extending or gifting usage limits / rate limits / credits for Codex or ChatGPT",
-  "topic_description": "Announcements or credible reports that OpenAI is doing a RESET or change of usage limits: phrases like 'we're going to do a reset', 'limits have been reset', 'resetting everyone's limits', 'we're giving everyone extra usage', 'raising the weekly limit', 'credits refreshed', 'bumping rate limits', 'limits are back', 'free usage this weekend'. Codex and ChatGPT Plus/Pro/Business usage limits are the subject of interest.",
+  "topic_description": "Announcements that OpenAI has RESET or changed usage limits. Real examples of hits: 'we have reset usage limits for Codex across all paid plans. May the tokens flow again.'; 'I have reset usage limits for all paid users of ChatGPT Work and Codex.'; 'crossed that 15M. Enjoy a nice reset everyone.'; 'we're going to do a reset'; 'limits are back'; 'everyone gets extra usage this weekend'; 'bumping rate limits for Pro'; 'credits refreshed'. Note that a reset is often announced obliquely, as a celebration or an apology for an incident, without the words 'usage limit' - e.g. 'sorry about the downtime, enjoy a reset on us'. The subject is always Codex / ChatGPT Plus / Pro / Business usage quotas.",
   "prefilter": [
     "reset",
     "resets",
