@@ -1,9 +1,18 @@
 # codex reset tracker
 
-Pings your Telegram the moment [@btibor91](https://x.com/btibor91) or
-[@sama](https://x.com/sama) posts about OpenAI **resetting / refreshing / raising
-usage limits** — "we're going to do a reset", "limits are back", "everyone gets
-extra usage", that kind of thing.
+Pings your Telegram the moment OpenAI announces a **usage-limit reset** for Codex
+or ChatGPT — "we have reset usage limits for Codex across all paid plans", "enjoy a
+nice reset everyone", "limits are back".
+
+Watches [@thsottiaux](https://x.com/thsottiaux) (Tibo — resets are announced on his
+feed and almost nowhere else), plus [@sama](https://x.com/sama),
+[@btibor91](https://x.com/btibor91) and [@OpenAI](https://x.com/OpenAI) as backup.
+Resets have historically landed roughly every 8 days.
+
+The hard part isn't the plumbing, it's that the announcements are oblique — a
+milestone celebration or an apology for an incident, often without the words
+"usage limit" anywhere in the post. That's why a model reads every post instead
+of a keyword filter.
 
 Runs on GitHub Actions cron. No X API. No server. No subscription.
 Model spend is roughly **$0.05/month**.
