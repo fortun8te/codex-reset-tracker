@@ -136,6 +136,43 @@ def parse_feed(xml, handle):
     return posts
 
 
+TG_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+
+
+def fetch_telegram_channel(channel):
+    """Public Telegram channels expose a keyless HTML preview at t.me/s/<name>.
+    @codexreset detects resets off OpenAI's own API, so it usually beats the
+    X announcement by a wide margin."""
+    page = http_get(f"https://t.me/s/{channel}", {"User-Agent": TG_UA})
+    blocks = re.split(r'(?=data-post="' + re.escape(channel) + r'/\d+")', page)
+    posts = []
+    for b in blocks[1:]:
+        m = re.match(r'data-post="([^"]+)"', b)
+        if not m:
+            continue
+        pid = m.group(1)
+        tm = re.search(r'class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', b, re.S)
+        if not tm:
+            continue
+        text = _clean(tm.group(1))
+        if not text:
+            continue
+        when = None
+        dt = re.findall(r'<time[^>]+datetime="([^"]+)"', b)
+        if dt:
+            try:
+                when = datetime.fromisoformat(dt[-1])
+            except Exception:
+                pass
+        posts.append({
+            "id": f"tg:{pid}", "handle": f"tg/{channel}", "author": channel,
+            "text": text, "url": f"https://t.me/{pid}", "when": when, "kind": "channel",
+        })
+    posts.reverse()  # newest first, matching the RSS sources
+    return posts
+
+
 def fetch_handle(handle, instances):
     """Try mirrors until one returns a usable feed. Returns (posts, ok)."""
     pool = instances[:]
@@ -305,12 +342,17 @@ def esc(s):
 
 def alert_text(post, why, model):
     stamp = post["when"].astimezone(timezone.utc).strftime("%d %b %H:%M UTC") if post["when"] else "just now"
-    tag = "🔁 repost by" if post["kind"] == "repost" else "🐦"
+    if post["kind"] == "channel":
+        tag = "📡"
+    elif post["kind"] == "repost":
+        tag = "🔁 repost by"
+    else:
+        tag = "🐦"
     body = post["text"]
     if len(body) > 900:
         body = body[:900] + "…"
     return (
-        f"🚨 <b>RESET ALERT</b> — {tag} @{esc(post['handle'])}\n"
+        f"🚨 <b>RESET ALERT</b> — {tag} {esc(post['handle'] if post['kind'] == 'channel' else '@' + post['handle'])}\n"
         f"<i>{stamp}</i>\n\n"
         f"{esc(body)}\n\n"
         f"🧠 <i>{esc(why)}</i>\n"
@@ -390,8 +432,18 @@ def main():
 
     fresh, scanned = [], 0
     for handle in cfg["handles"]:
-        log(f"fetching @{handle}")
-        posts, ok = fetch_handle(handle, cfg["nitter_instances"])
+        if handle.startswith("tg/"):
+            log(f"fetching telegram channel {handle}")
+            try:
+                posts = fetch_telegram_channel(handle[3:])
+                ok = bool(posts)
+                log(f"  t.me/s/{handle[3:]} -> {len(posts)} messages")
+            except Exception as e:
+                posts, ok = [], False
+                log(f"  t.me/s/{handle[3:]} -> {type(e).__name__}: {e}")
+        else:
+            log(f"fetching @{handle}")
+            posts, ok = fetch_handle(handle, cfg["nitter_instances"])
         if not ok:
             streaks[handle] = streaks.get(handle, 0) + 1
             log(f"  !! every mirror failed for @{handle} (streak {streaks[handle]}) — state untouched")
@@ -449,7 +501,13 @@ def main():
     if candidates:
         verdicts = classify(candidates[:20], cfg, or_key)
         for p in candidates:
-            hit, why, model = verdicts.get(p["id"], (False, "", ""))
+            if p["id"] in verdicts:
+                hit, why, model = verdicts[p["id"]]
+            else:
+                # model skipped this one - never drop a post silently
+                hit, why, model = strong_hit(p["text"]), "keyword match (model returned no verdict)", "regex"
+                if hit:
+                    log(f"  no verdict for {p['url']}, regex says hit")
             if not hit:
                 continue
             if alerts >= cfg.get("max_alerts_per_run", 6):

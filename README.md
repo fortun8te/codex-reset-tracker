@@ -4,9 +4,14 @@ Pings your Telegram the moment OpenAI announces a **usage-limit reset** for Code
 or ChatGPT — "we have reset usage limits for Codex across all paid plans", "enjoy a
 nice reset everyone", "limits are back".
 
-Watches [@thsottiaux](https://x.com/thsottiaux) (Tibo — resets are announced on his
-feed and almost nowhere else), plus [@sama](https://x.com/sama),
-[@btibor91](https://x.com/btibor91) and [@OpenAI](https://x.com/OpenAI) as backup.
+Two independent sources:
+
+- **[@codexreset](https://t.me/codexreset)** — a public Telegram channel that detects
+  resets off OpenAI's own API and posts bilingual CN/EN alerts. Usually first.
+- **X/Twitter** — [@thsottiaux](https://x.com/thsottiaux) (Tibo; resets are announced
+  on his feed and almost nowhere else), plus [@sama](https://x.com/sama),
+  [@btibor91](https://x.com/btibor91) and [@OpenAI](https://x.com/OpenAI) as backup.
+
 Resets have historically landed roughly every 8 days.
 
 The hard part isn't the plumbing, it's that the announcements are oblique — a
@@ -20,7 +25,7 @@ Model spend is roughly **$0.05/month**.
 ```
 GitHub Actions cron (*/5 min)
         │
-        ├─ 1. fetch  → Nitter RSS mirrors (rotating pool, no auth, no API key)
+        ├─ 1. fetch  → Nitter RSS mirrors + t.me/s/codexreset (no auth, no API key)
         ├─ 2. diff   → state.json ring buffer of post ids already seen
         ├─ 3. judge  → OpenRouter, one batched call, strict yes/no per post
         └─ 4. alert  → Telegram sendMessage
@@ -67,7 +72,8 @@ TLS-intercepting proxy, never in CI.
 
 Everything lives in [`config.json`](config.json):
 
-- `handles` — who to watch. Add `"OpenAI"`, `"embirico"`, anyone public.
+- `handles` — who to watch. A bare name is an X account; `"tg/<name>"` is a public
+  Telegram channel. Both go through the same judge.
 - `topic` / `topic_description` — what counts as a hit. This *is* the prompt the
   model sees; rewrite it and the tracker tracks something else entirely.
 - `models` — OpenRouter fallback chain, tried in order.

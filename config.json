@@ -1,12 +1,13 @@
 {
   "handles": [
+    "tg/codexreset",
     "thsottiaux",
     "sama",
     "btibor91",
     "OpenAI"
   ],
   "topic": "OpenAI resetting, refreshing, raising, extending or gifting usage limits / rate limits / credits for Codex or ChatGPT",
-  "topic_description": "Announcements that OpenAI has RESET or changed usage limits. Real examples of hits: 'we have reset usage limits for Codex across all paid plans. May the tokens flow again.'; 'I have reset usage limits for all paid users of ChatGPT Work and Codex.'; 'crossed that 15M. Enjoy a nice reset everyone.'; 'we're going to do a reset'; 'limits are back'; 'everyone gets extra usage this weekend'; 'bumping rate limits for Pro'; 'credits refreshed'. Note that a reset is often announced obliquely, as a celebration or an apology for an incident, without the words 'usage limit' - e.g. 'sorry about the downtime, enjoy a reset on us'. The subject is always Codex / ChatGPT Plus / Pro / Business usage quotas.",
+  "topic_description": "Announcements that OpenAI has RESET or changed usage limits. Real examples of hits: 'we have reset usage limits for Codex across all paid plans. May the tokens flow again.'; 'I have reset usage limits for all paid users of ChatGPT Work and Codex.'; 'crossed that 15M. Enjoy a nice reset everyone.'; 'we're going to do a reset'; 'limits are back'; 'everyone gets extra usage this weekend'; 'bumping rate limits for Pro'; 'credits refreshed'. Note that a reset is often announced obliquely, as a celebration or an apology for an incident, without the words 'usage limit' - e.g. 'sorry about the downtime, enjoy a reset on us'. The subject is always Codex / ChatGPT Plus / Pro / Business usage quotas. The @codexreset Telegram channel posts bilingual CN/EN alerts detected from OpenAI's own API - 'Codex quota has now been reset early! Reset time: ... UTC' is a confirmed hit.",
   "prefilter": [
     "reset",
     "resets",
