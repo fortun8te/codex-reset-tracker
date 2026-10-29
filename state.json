@@ -1,10 +1,10 @@
 {
   "fail_streak": {
-    "OpenAI": 6,
-    "btibor91": 65,
-    "sama": 65,
+    "OpenAI": 7,
+    "btibor91": 66,
+    "sama": 66,
     "tg/codexreset": 0,
-    "thsottiaux": 65
+    "thsottiaux": 66
   },
   "last_heartbeat": "2026-10-29T15:52:37.080481+00:00",
   "seeded": true,
@@ -94,6 +94,7 @@
       "2084663673570971990"
     ],
     "tg/codexreset": [
+      "tg:codexreset/69",
       "tg:codexreset/67",
       "tg:codexreset/66",
       "tg:codexreset/65",
