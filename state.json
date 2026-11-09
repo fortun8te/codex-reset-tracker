@@ -1,10 +1,10 @@
 {
   "fail_streak": {
     "OpenAI": 0,
-    "btibor91": 0,
-    "sama": 0,
+    "btibor91": 1,
+    "sama": 1,
     "tg/codexreset": 0,
-    "thsottiaux": 2
+    "thsottiaux": 3
   },
   "last_heartbeat": "2026-11-08T07:51:56.082459+00:00",
   "seeded": true,
