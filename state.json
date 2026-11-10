@@ -1,15 +1,17 @@
 {
   "fail_streak": {
-    "OpenAI": 1,
-    "btibor91": 1,
-    "sama": 3,
+    "OpenAI": 0,
+    "btibor91": 2,
+    "sama": 0,
     "tg/codexreset": 0,
-    "thsottiaux": 5
+    "thsottiaux": 6
   },
   "last_heartbeat": "2026-11-09T09:38:26.344656+00:00",
   "seeded": true,
   "seen": {
     "OpenAI": [
+      "2119913172039868579",
+      "2119883176726409645",
       "2118795218099253606",
       "2118782708767965238",
       "2118390195099930906",
