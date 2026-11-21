@@ -1,7 +1,7 @@
 {
   "fail_streak": {
     "OpenAI": 0,
-    "btibor91": 0,
+    "btibor91": 1,
     "sama": 0,
     "tg/codexreset": 0,
     "thsottiaux": 0
@@ -253,6 +253,7 @@
       "tg:codexreset/1"
     ],
     "thsottiaux": [
+      "2123997735326232775",
       "2123864112694509995",
       "2123861214644347122",
       "2123612433923051976",
